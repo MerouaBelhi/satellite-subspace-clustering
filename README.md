@@ -1,10 +1,10 @@
-# Satellite Subspace Clustering
+﻿# Satellite Subspace Clustering
 
 ![tests](https://github.com/MerouaBelhi/satellite-subspace-clustering/actions/workflows/tests.yml/badge.svg)
 
 ![DESSC++ on a DeepGlobe tile with the thesis colour features and with DINOv2 features](docs/deepglobe_example.png)
 
-*DeepGlobe Land Cover tile. Left to right: satellite image, ground truth, DESSC++ on the Master's thesis colour features, and DESSC++ on DINOv2 features (8 clusters on 800 superpixels, each cluster shown in the colour of its majority class). Colours: urban cyan, agriculture yellow, rangeland magenta, forest green, water blue, barren white, unknown black.*
+*DeepGlobe Land Cover tiles from the benchmark sample, one per row (in the last row the colour features do better). Left to right: satellite image, ground truth, DESSC++ on the Master's thesis colour features, and DESSC++ on DINOv2 features (8 clusters on 800 superpixels, each cluster shown in the colour of its majority class). Colours: urban cyan, agriculture yellow, rangeland magenta, forest green, water blue, barren white, unknown black.*
 
 **Highlights**
 - Python re-implementation of DESSC that matches the published Iris results to four decimals.
@@ -63,7 +63,7 @@ Download the *DeepGlobe Land Cover Classification* dataset and point the script 
 python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features thesis,lab,lbp --superpixels 800 --k 8
 pip install torch torchvision          # for DINOv2 features
 python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features dinov2 --superpixels 800 --k 8
-python benchmarks/make_figure.py DATA 849797     # README figure
+python benchmarks/make_figure.py DATA 849797 325354 930491 882451     # README figure
 ```
 
 Each run appends per-image scores to `results.csv`.
