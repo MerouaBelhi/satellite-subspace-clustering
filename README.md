@@ -1,10 +1,10 @@
-﻿# Satellite Subspace Clustering
+# Satellite Subspace Clustering
 
 ![tests](https://github.com/MerouaBelhi/satellite-subspace-clustering/actions/workflows/tests.yml/badge.svg)
 
-![From the Master's thesis baseline to DESSC++ on a synthetic scene](docs/example.png)
+![DESSC++ on a DeepGlobe tile with the thesis colour features and with DINOv2 features](docs/deepglobe_example.png)
 
-*Synthetic scene. Left to right: input, ground truth, the Master's thesis baseline (DESSC on colour features, pixel-wise), and DESSC++ with colour and texture features on superpixels.*
+*DeepGlobe Land Cover tile. Left to right: satellite image, ground truth, DESSC++ on the Master's thesis colour features, and DESSC++ on DINOv2 features (8 clusters on 800 superpixels, each cluster shown in the colour of its majority class). Colours: urban cyan, agriculture yellow, rangeland magenta, forest green, water blue, barren white, unknown black.*
 
 **Highlights**
 - Python re-implementation of DESSC that matches the published Iris results to four decimals.
@@ -27,6 +27,7 @@ Unsupervised land-cover segmentation of satellite images with **soft subspace cl
 | `sscluster/deep.py` | DINOv2 patch tokens → PCA → per-pixel feature map |
 | `sscluster/segmentation.py` | Segmentation pipeline, DeepGlobe masks, Hungarian matching, mIoU |
 | `benchmarks/` | Paper reproduction on UCI data, DeepGlobe benchmark, synthetic scenes, diagnosis of DESSC vs k-means |
+| `benchmarks/make_figure.py` | Builds the README figure from DeepGlobe tiles |
 | `app.py` | Gradio demo |
 | `tests/` | 20 pytest tests |
 
@@ -53,6 +54,57 @@ labels = segment(img, DESSC(n_clusters=4), features=feats, superpixels=800)
 pip install gradio
 python app.py
 ```
+
+### DeepGlobe benchmark
+
+Download the *DeepGlobe Land Cover Classification* dataset and point the script at its `train` folder:
+
+```bash
+python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features thesis,lab,lbp --superpixels 800 --k 8
+pip install torch torchvision          # for DINOv2 features
+python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features dinov2 --superpixels 800 --k 8
+python benchmarks/make_figure.py DATA 849797     # README figure
+```
+
+Each run appends per-image scores to `results.csv`.
+
+## Results
+
+### Reproducing the paper (Iris, min-max normalised, 10 runs)
+
+| | RI | ARI | NMI |
+|---|---|---|---|
+| This implementation | 0.9495 ± 0 | 0.8857 ± 0 | 0.8642 ± 0 |
+| Li et al. (2016) | 0.9495 | 0.8857 | 0.8642 |
+| k-means | 0.8714 | 0.7102 | 0.7309 |
+
+On Wine the implementation reaches RI 0.897 versus 0.918 reported; the paper does not give NP, F, CR or the number of generations, so the defaults here (20, 0.5, 0.9, 50) may differ.
+
+### Synthetic scenes: why DESSC trailed k-means, and the fix
+
+![Thesis baseline vs DESSC++ on a synthetic scene](docs/example.png)
+
+*Synthetic scene: input, ground truth, the thesis baseline (DESSC on colour features, pixel-wise), and DESSC++ with colour and texture features on superpixels.*
+
+Five synthetic land-cover scenes with ground truth (`benchmarks/make_synthetic.py`), 21 features per superpixel (thesis + Lab + LBP), 800 superpixels, one cluster per class. Single-run numbers are averaged over 5 seeds. Reproduce with `python benchmarks/diagnose.py DATA`.
+
+| Method | mIoU |
+|---|---|
+| Thesis features only, pixels (DESSC / k-means) | 0.50 / 0.59 |
+| k-means, best of 10 restarts | 0.941 |
+| k-means, single run | 0.840 |
+| DESSC as in the paper, single run | 0.786 |
+| **DESSC with k-means++ initialisation, single run** | **0.934** |
+
+Three hypotheses were tested for the gap between DESSC and k-means:
+
+1. **Unfair comparison: partly true.** scikit-learn's k-means keeps the best of 10 restarts. Run once, it drops to 0.84, which shrinks the gap from 15 points to 5.
+2. **Collapse of the subspace weights: rejected.** Each cluster still uses about 17.5 of 21 dimensions (exp of the weight entropy).
+3. **Search budget: confirmed.** With 40 individuals and 150 generations, DESSC reaches 0.89, already above a single k-means run.
+
+So the weakness is in the search, not in the model. Starting each individual from k-means++ centres instead of random data points (`DESSC(..., init="k-means++")`) raises DESSC from 0.79 to **0.93** at the same cost. The change leaves Iris unchanged and raises Wine slightly (RI 0.897 → 0.902).
+
+**Caveat.** Picking the DESSC run with the lowest objective out of 10 gives 0.895, lower than the average single run: on one scene a lower objective produces a worse segmentation, so minimising weighted within-cluster variance does not always match the land-cover classes.
 
 ### DeepGlobe Land Cover (real images)
 
