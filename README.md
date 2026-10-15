@@ -1,4 +1,4 @@
-﻿# Satellite Subspace Clustering
+# Satellite Subspace Clustering
 
 ![tests](https://github.com/MerouaBelhi/satellite-subspace-clustering/actions/workflows/tests.yml/badge.svg)
 
@@ -117,11 +117,13 @@ In most DeepGlobe tiles one class (usually agriculture) covers most of the image
 | Thesis (colour, 5-D) | 0.268 | 0.343 | 0.341 | 0.356 |
 | + Lab + LBP (21-D) | 0.268 | 0.360 | 0.369 | 0.374 |
 | **DINOv2 ViT-S/14, PCA to 32-D** | 0.268 | **0.407** | **0.415** | **0.419** |
+| All of the above (thesis + Lab + LBP + DINOv2, 53-D) | 0.268 | 0.425 | 0.408 | 0.429 |
 
 ```bash
 python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features thesis --superpixels 800 --k 8
 python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features thesis,lab,lbp --superpixels 800 --k 8
 python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features dinov2 --superpixels 800 --k 8
+python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features thesis,lab,lbp,dinov2 --superpixels 800 --k 8
 ```
 
 **Findings**
@@ -129,7 +131,8 @@ python benchmarks/deepglobe.py DATA --limit 20 --shuffle --features dinov2 --sup
 1. **Features matter far more than the clustering algorithm.** The gain over the baseline roughly doubles from colour features (+0.08 mIoU) to DINOv2 (+0.15), and pixel accuracy reaches 0.90.
 2. **On real images, DESSC does not beat k-means.** DESSC++ is within 0.005 mIoU of k-means for every feature set, each wins on a similar number of tiles, and k-means is about 9× faster. The clear advantage of DESSC++ on synthetic scenes did not carry over.
 3. **A likely reason, and the next experiment.** The DINOv2 tokens are reduced with PCA, which decorrelates the dimensions and leaves little for per-cluster feature weighting to exploit. Clustering the full 384-D tokens is the real test of soft subspace clustering on deep features.
-4. **Limits.** 20 tiles is a small sample: differences below about 0.01 mIoU should not be read as rankings. In 8 of the 20 tiles no method beats the baseline with hand-crafted features; small classes there are not separable by colour or texture.
+4. **Mixing feature types does not favour DESSC either.** The hypothesis was that per-cluster weights would let each cluster lean on the features that suit it (colour for thin water or roads, DINOv2 for large regions). Stacking all 53 features helps k-means and DESSC slightly over DINOv2 alone, but k-means stays ahead. DESSC weights single dimensions, not feature groups, so the 32 DINOv2 dimensions dominate; group-level weighting (Chen et al., 2012) would be the proper test.
+5. **Limits.** 20 tiles is a small sample: differences below about 0.01 mIoU should not be read as rankings. In 8 of the 20 tiles no method beats the baseline with hand-crafted features; small classes there are not separable by colour or texture.
 
 ## Design notes
 
