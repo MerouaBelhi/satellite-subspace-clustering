@@ -4,7 +4,7 @@
 
 ![DESSC++ on a DeepGlobe tile with the thesis colour features and with DINOv2 features](docs/deepglobe_example.png)
 
-*DeepGlobe Land Cover tiles from the benchmark sample, one per row (in the last row the colour features do better). Left to right: satellite image, ground truth, DESSC++ on the Master's thesis colour features, and DESSC++ on DINOv2 features (8 clusters on 800 superpixels, each cluster shown in the colour of its majority class). Colours: urban cyan, agriculture yellow, rangeland magenta, forest green, water blue, barren white, unknown black.*
+*DeepGlobe Land Cover tiles from the benchmark sample, one per row (in the last row the colour features do better). Left to right: satellite image, ground truth, DESSC++ (DESSC with k-means++ initialisation, explained below) on the Master's thesis colour features, and DESSC++ on DINOv2 features (8 clusters on 800 superpixels, each cluster shown in the colour of its majority class). Colours: urban cyan, agriculture yellow, rangeland magenta, forest green, water blue, barren white, unknown black.*
 
 **Highlights**
 - Python re-implementation of DESSC that matches the published Iris results to four decimals.
@@ -102,7 +102,7 @@ Three hypotheses were tested for the gap between DESSC and k-means:
 2. **Collapse of the subspace weights: rejected.** Each cluster still uses about 17.5 of 21 dimensions (exp of the weight entropy).
 3. **Search budget: confirmed.** With 40 individuals and 150 generations, DESSC reaches 0.89, already above a single k-means run.
 
-So the weakness is in the search, not in the model. Starting each individual from k-means++ centres instead of random data points (`DESSC(..., init="k-means++")`) raises DESSC from 0.79 to **0.93** at the same cost. The change leaves Iris unchanged and raises Wine slightly (RI 0.897 → 0.902).
+So the weakness is in the search, not in the model. Starting each individual from k-means++ centres instead of random data points (`DESSC(..., init="k-means++")`) raises DESSC from 0.79 to **0.93** at the same cost. This variant is called **DESSC++** in the rest of this README. The change leaves Iris unchanged and raises Wine slightly (RI 0.897 → 0.902).
 
 **Caveat.** Picking the DESSC run with the lowest objective out of 10 gives 0.895, lower than the average single run: on one scene a lower objective produces a worse segmentation, so minimising weighted within-cluster variance does not always match the land-cover classes.
 
